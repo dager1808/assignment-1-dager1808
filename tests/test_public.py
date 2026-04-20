@@ -32,7 +32,7 @@ from tests.conftest import FIXED_NOW, RECENT, OLD
 
 class TestTotalListeningTime:
     """Test the total_listening_time_minutes(start, end) method.
-    
+
     This method should sum up all session durations that fall within
     the specified datetime window (inclusive on both ends).
     """
@@ -52,10 +52,16 @@ class TestTotalListeningTime:
         )
         assert result == 0.0
 
-    # TODO: Add a test that verifies the correct value for a known time period.
-    #       Calculate the expected total based on the fixture data in conftest.py.
     def test_known_period_value(self, platform: StreamingPlatform) -> None:
-        pass
+        """Verify the correct total for a window that covers all fixture sessions.
+
+        Fixture sessions (all at RECENT):
+          s1=120s, s2=180s, s3=195s, s4=300s, s5=90s  ->  885s = 14.75 min
+        """
+        start = RECENT - timedelta(hours=1)
+        end = FIXED_NOW
+        result = platform.total_listening_time_minutes(start, end)
+        assert result == pytest.approx(14.75)
 
 
 # ===========================================================================
@@ -64,7 +70,7 @@ class TestTotalListeningTime:
 
 class TestAvgUniqueTracksPremium:
     """Test the avg_unique_tracks_per_premium_user(days) method.
-    
+
     This method should:
     - Count distinct tracks per PremiumUser in the last N days
     - Exclude FreeUser, FamilyAccountUser, and FamilyMember
@@ -82,11 +88,14 @@ class TestAvgUniqueTracksPremium:
         p.add_user(FreeUser("u99", "Nobody", age=25))
         assert p.avg_unique_tracks_per_premium_user() == 0.0
 
-    # TODO: Add a test with the fixture platform that verifies the correct
-    #       average for premium users. You'll need to count unique tracks
-    #       per premium user and calculate the average.
     def test_correct_value(self, platform: StreamingPlatform) -> None:
-        pass
+        """Verify the correct average for the fixture's premium users.
+
+        bob is the only exact PremiumUser and listened to t1 once within 30 days
+        -> 1 unique track -> average = 1.0
+        """
+        result = platform.avg_unique_tracks_per_premium_user(days=30)
+        assert result == pytest.approx(1.0)
 
 
 # ===========================================================================
@@ -95,7 +104,7 @@ class TestAvgUniqueTracksPremium:
 
 class TestTrackMostDistinctListeners:
     """Test the track_with_most_distinct_listeners() method.
-    
+
     This method should:
     - Count the number of unique users who have listened to each track
     - Return the track with the highest count
@@ -107,10 +116,15 @@ class TestTrackMostDistinctListeners:
         p = StreamingPlatform("Empty")
         assert p.track_with_most_distinct_listeners() is None
 
-    # TODO: Add a test that verifies the correct track is returned.
-    #       Count listeners per track from the fixture data.
     def test_correct_track(self, platform: StreamingPlatform) -> None:
-        pass
+        """Verify the track with the most distinct listeners is returned.
+
+        t1 was heard by alice, bob, and dave (3 distinct listeners).
+        t2 and t3 were heard only by alice (1 listener each).
+        """
+        result = platform.track_with_most_distinct_listeners()
+        assert result is not None
+        assert result.track_id == "t1"
 
 
 # ===========================================================================
@@ -119,7 +133,7 @@ class TestTrackMostDistinctListeners:
 
 class TestAvgSessionDurationByType:
     """Test the avg_session_duration_by_user_type() method.
-    
+
     This method should:
     - Calculate average session duration (in seconds) for each user type
     - Return a list of (type_name, average_duration) tuples
@@ -140,9 +154,24 @@ class TestAvgSessionDurationByType:
         durations = [r[1] for r in result]
         assert durations == sorted(durations, reverse=True)
 
-    # TODO: Add tests to verify all user types are present and have correct averages.
     def test_all_user_types_present(self, platform: StreamingPlatform) -> None:
-        pass
+        """Verify all four user types appear in the result with correct averages.
+
+        FreeUser  (alice): (120+180+195)/3 = 165.0 s
+        PremiumUser (bob): 300/1            = 300.0 s
+        FamilyMember (dave): 90/1           =  90.0 s
+        FamilyAccountUser (carol): no sessions -> 0.0 s
+        """
+        result = platform.avg_session_duration_by_user_type()
+        type_names = {name for name, _ in result}
+        assert type_names == {"FreeUser", "PremiumUser", "FamilyAccountUser", "FamilyMember"}
+        assert len(result) == 4
+
+        by_type = dict(result)
+        assert by_type["FreeUser"] == pytest.approx(165.0)
+        assert by_type["PremiumUser"] == pytest.approx(300.0)
+        assert by_type["FamilyMember"] == pytest.approx(90.0)
+        assert by_type["FamilyAccountUser"] == pytest.approx(0.0)
 
 
 # ===========================================================================
@@ -151,7 +180,7 @@ class TestAvgSessionDurationByType:
 
 class TestUnderageSubUserListening:
     """Test the total_listening_time_underage_sub_users_minutes(age_threshold) method.
-    
+
     This method should:
     - Count only sessions for FamilyMember users under the age threshold
     - Convert to minutes
@@ -169,12 +198,23 @@ class TestUnderageSubUserListening:
         p.add_user(FreeUser("u1", "Solo", age=20))
         assert p.total_listening_time_underage_sub_users_minutes() == 0.0
 
-    # TODO: Add tests for correct values with default and custom thresholds.
     def test_correct_value_default_threshold(self, platform: StreamingPlatform) -> None:
-        pass
+        """Verify the default threshold of 18 is applied correctly.
+
+        dave is a FamilyMember aged 15 (< 18) with one session of 90 s = 1.5 min.
+        """
+        result = platform.total_listening_time_underage_sub_users_minutes()
+        assert result == pytest.approx(1.5)
 
     def test_custom_threshold(self, platform: StreamingPlatform) -> None:
-        pass
+        """Verify a custom age threshold is respected.
+
+        dave (age 15):
+          threshold=16 -> 15 < 16 -> counted  -> 1.5 min
+          threshold=14 -> 15 >= 14 -> excluded -> 0.0 min
+        """
+        assert platform.total_listening_time_underage_sub_users_minutes(age_threshold=16) == pytest.approx(1.5)
+        assert platform.total_listening_time_underage_sub_users_minutes(age_threshold=14) == pytest.approx(0.0)
 
 
 # ===========================================================================
@@ -183,7 +223,7 @@ class TestUnderageSubUserListening:
 
 class TestTopArtistsByListeningTime:
     """Test the top_artists_by_listening_time(n) method.
-    
+
     This method should:
     - Rank artists by total cumulative listening time (minutes)
     - Only count Song tracks (exclude Podcast and AudiobookTrack)
@@ -211,9 +251,17 @@ class TestTopArtistsByListeningTime:
         result = platform.top_artists_by_listening_time(n=2)
         assert len(result) <= 2
 
-    # TODO: Add a test that verifies the correct artists and values.
     def test_top_artist(self, platform: StreamingPlatform) -> None:
-        pass
+        """Verify the correct artist and total listening time.
+
+        All fixture sessions use AlbumTracks (Song subclass) by Pixels (a1).
+        Total: 120+180+195+300+90 = 885 s = 14.75 min.
+        """
+        result = platform.top_artists_by_listening_time(n=5)
+        assert len(result) >= 1
+        top_artist, top_minutes = result[0]
+        assert top_artist.artist_id == "a1"
+        assert top_minutes == pytest.approx(14.75)
 
 
 # ===========================================================================
@@ -222,7 +270,7 @@ class TestTopArtistsByListeningTime:
 
 class TestUserTopGenre:
     """Test the user_top_genre(user_id) method.
-    
+
     This method should:
     - Find the genre with the most listening time for a user
     - Return (genre_name, percentage_of_total_time)
@@ -248,9 +296,16 @@ class TestUserTopGenre:
                 _, pct = result
                 assert 0.0 <= pct <= 100.0
 
-    # TODO: Add a test that verifies the correct genre and percentage for a known user.
     def test_correct_top_genre(self, platform: StreamingPlatform) -> None:
-        pass
+        """Verify the correct genre and percentage for alice.
+
+        alice listened only to pop tracks (t1, t2, t3) -> top genre "pop" at 100%.
+        """
+        result = platform.user_top_genre("u1")
+        assert result is not None
+        genre, percentage = result
+        assert genre == "pop"
+        assert percentage == pytest.approx(100.0)
 
 
 # ===========================================================================
@@ -259,7 +314,7 @@ class TestUserTopGenre:
 
 class TestCollaborativePlaylistsManyArtists:
     """Test the collaborative_playlists_with_many_artists(threshold) method.
-    
+
     This method should:
     - Return all CollaborativePlaylist instances with >threshold distinct artists
     - Only count Song tracks (exclude Podcast and AudiobookTrack)
@@ -282,10 +337,40 @@ class TestCollaborativePlaylistsManyArtists:
         result = platform.collaborative_playlists_with_many_artists(threshold=100)
         assert result == []
 
-    # TODO: Add tests that verify the correct playlists are returned with
-    #       different threshold values.
     def test_default_threshold(self, platform: StreamingPlatform) -> None:
-        pass
+        """Verify the default threshold of 3 (strictly greater than) is respected.
+
+        A playlist with exactly 3 distinct artists must NOT be included.
+        A playlist with 4 distinct artists must be included.
+        """
+        from streaming.artists import Artist
+        from streaming.tracks import Song
+
+        p = StreamingPlatform("Q8Test")
+        a1 = Artist("qa1", "ArtistOne",   genre="rock")
+        a2 = Artist("qa2", "ArtistTwo",   genre="pop")
+        a3 = Artist("qa3", "ArtistThree", genre="jazz")
+        a4 = Artist("qa4", "ArtistFour",  genre="blues")
+
+        user = FreeUser("qu1", "TestUser", age=25)
+
+        # 3 distinct artists -> NOT above default threshold of 3
+        cpl_three = CollaborativePlaylist("qcp1", "3-Artist Mix", owner=user)
+        for artist, tid in zip([a1, a2, a3], ["qt1", "qt2", "qt3"]):
+            cpl_three.add_track(Song(tid, "Song", 120, artist.genre, artist))
+
+        # 4 distinct artists -> above default threshold of 3
+        cpl_four = CollaborativePlaylist("qcp2", "4-Artist Mix", owner=user)
+        for artist, tid in zip([a1, a2, a3, a4], ["qt4", "qt5", "qt6", "qt7"]):
+            cpl_four.add_track(Song(tid, "Song", 120, artist.genre, artist))
+
+        p.add_user(user)
+        p.add_playlist(cpl_three)
+        p.add_playlist(cpl_four)
+
+        result = p.collaborative_playlists_with_many_artists()
+        assert cpl_three not in result
+        assert cpl_four in result
 
 
 # ===========================================================================
@@ -294,7 +379,7 @@ class TestCollaborativePlaylistsManyArtists:
 
 class TestAvgTracksPerPlaylistType:
     """Test the avg_tracks_per_playlist_type() method.
-    
+
     This method should:
     - Calculate average track count for standard Playlist instances
     - Calculate average track count for CollaborativePlaylist instances
@@ -311,14 +396,23 @@ class TestAvgTracksPerPlaylistType:
         assert "Playlist" in result
         assert "CollaborativePlaylist" in result
 
-    # TODO: Add tests that verify the correct averages for each playlist type.
     def test_standard_playlist_average(self, platform: StreamingPlatform) -> None:
-        pass
+        """Verify the correct average for standard Playlist instances.
+
+        Fixture has one Playlist (pl1) with 2 tracks -> average = 2.0.
+        """
+        result = platform.avg_tracks_per_playlist_type()
+        assert result["Playlist"] == pytest.approx(2.0)
 
     def test_collaborative_playlist_average(
         self, platform: StreamingPlatform
     ) -> None:
-        pass
+        """Verify the correct average for CollaborativePlaylist instances.
+
+        Fixture has one CollaborativePlaylist (cpl1) with 3 tracks -> average = 3.0.
+        """
+        result = platform.avg_tracks_per_playlist_type()
+        assert result["CollaborativePlaylist"] == pytest.approx(3.0)
 
 
 # ===========================================================================
@@ -327,7 +421,7 @@ class TestAvgTracksPerPlaylistType:
 
 class TestUsersWhoCompletedAlbums:
     """Test the users_who_completed_albums() method.
-    
+
     This method should:
     - Return users who have listened to every track on at least one album
     - Return (User, [album_titles]) tuples
@@ -352,9 +446,26 @@ class TestUsersWhoCompletedAlbums:
         for _, titles in result:
             assert all(isinstance(t, str) for t in titles)
 
-    # TODO: Add tests that verify the correct users and albums are identified.
     def test_correct_users_identified(self, platform: StreamingPlatform) -> None:
-        pass
+        """Verify only users who heard every track of an album are returned.
+
+        alice listened to t1, t2, t3 (all tracks of "Digital Dreams") -> included.
+        bob and dave only heard t1                                     -> excluded.
+        carol has no sessions                                          -> excluded.
+        """
+        result = platform.users_who_completed_albums()
+        completed_ids = {user.user_id for user, _ in result}
+        assert "u1" in completed_ids       # alice completed the album
+        assert "u2" not in completed_ids   # bob only heard t1
+        assert "u3" not in completed_ids   # carol has no sessions
+        assert "u4" not in completed_ids   # dave only heard t1
 
     def test_correct_album_titles(self, platform: StreamingPlatform) -> None:
-        pass
+        """Verify the correct album title is listed for a completing user.
+
+        alice should have ["Digital Dreams"] in her completed albums.
+        """
+        result = platform.users_who_completed_albums()
+        user_albums = {user.user_id: titles for user, titles in result}
+        assert "u1" in user_albums
+        assert "Digital Dreams" in user_albums["u1"]

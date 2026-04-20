@@ -79,79 +79,80 @@ class StreamingPlatform:
         return list(self._tracks)
 
     # Q1: Calculate listening time in minutes
-    def total_listening_time_minutes(self, start: datetime, end: datetime) -> float: # return type float
-        total_seconds = 0 # for counting in seconds
+    def total_listening_time_minutes(self, start: datetime, end: datetime) -> float:  # return type float
+        total_seconds = 0  # for counting in seconds
 
-        for session in self._sessions: # going through all sessions in self._sessions
-            if start <= session.timestamp <= end: # only counting session, when timestamp ist bigger or equal to start
+        for session in self._sessions:  # going through all sessions in self._sessions
+            if start <= session.timestamp <= end:  # only counting session, when timestamp ist bigger or equal to start
                 # or timestamp is smaller or equal to end
-                total_seconds += session.duration_listened_seconds # if session is in this window, we count it to the total
+                total_seconds += session.duration_listened_seconds  # if session is in this window, we count it to the total
 
-        return total_seconds / 60 # # convert total seconds to minutes (required output)
+        return total_seconds / 60  # # convert total seconds to minutes (required output)
 
     # Q2: average of unique tracks listened to per premiumUser in the last days
     def avg_unique_tracks_per_premium_user(self, days: int = 30) -> float:
-        # premium_users = [user for user in self._users if isinstance(user, PremiumUser)]
-        # premium_users = [user for user in self._users if type(user) is PremiumUser]
-
         # # filter only exact PremiumUser (exclude subclasses like FamilyAccountUser):
-        premium_users =[]
+        premium_users = []
         for user in self._users:
             if type(user) is PremiumUser:
                 premium_users.append(user)
 
-        if not premium_users: # When the list is empty (no premiumUser)
+        #  return 0 if no premium users exist
+        if not premium_users:
             return 0.0
 
         # we only want to count in sessions that are new
-        cutoff = datetime.now() - timedelta(days=days) # We calculate the date that is "days" days in the past.
+        cutoff = datetime.now() - timedelta(days=days)  # We calculate the date that is "days" days in the past.
         total_unique_track_counts = 0
 
-        for user in premium_users: # iterating through all premiumUsers (list we made)
-            unique_track_ids = set() # A set does not save any duplicates
+        for user in premium_users:
+            unique_track_ids = set()  # A set does not save any duplicates
 
-            for session in user.sessions: # only going through the sessions of the User for the one iteration
-                if session.timestamp >= cutoff: # only counting in sessions that are newer or equal to the variable cutoff
-                    unique_track_ids.add(session.track.track_id) # adding the trackID
+            for session in user.sessions:  # only going through the sessions of the User for the one iteration
+                if session.timestamp >= cutoff:
+                    unique_track_ids.add(session.track.track_id)
 
-            total_unique_track_counts += len(unique_track_ids) # count distinct tracks for this user
+            # count distinct tracks for this user
+            total_unique_track_counts += len(unique_track_ids)
 
-        return total_unique_track_counts / len(premium_users) # calculating the mean
+        # return average number of distinct tracks
+        return total_unique_track_counts / len(premium_users)
 
-    #Q3: # looking for track with the most distinct listeners
-    def track_with_most_distinct_listeners(self): # no added parameters, just looking at all the sessions
-        if not self._sessions: # if there is no session, then there is no listener
+    # Q3: # looking for track with the most distinct listeners
+    def track_with_most_distinct_listeners(self):  # no added parameters, just looking at all the sessions
+        # return None if no sessions exist
+        if not self._sessions:
             return None
 
-        listeners_per_track = {} # a dictionary that saves the track-object and its set of distinct listeners
+        # map each track_id to its track object and set of unique listeners
+        listeners_per_track = {}
 
-        for session in self._sessions: # going through every session of the platform
+        for session in self._sessions:
             track = session.track
             user = session.user
 
-            if track.track_id not in listeners_per_track: # if we have not already added the track to the dictionary:
+            if track.track_id not in listeners_per_track:
                 listeners_per_track[track.track_id] = {
                     "track": track,
-                    "listeners": set(), # set so there are no duplicates
-                } # we create a new entry for the track and his listeners
-            # the User of the session will be the listener of the track:
-            # We are doing this, so when the same User listens to a song track more than ones, his userID
-            # will be added again and again, but in a set this is not possible
+                    "listeners": set(),
+                }
             listeners_per_track[track.track_id]["listeners"].add(user.user_id)
 
         best_track = None
-        best_listener_count = -1 # -1 so the first real track will be the best track instantly
+        best_listener_count = -1  # -1 ensures first valid track is selected
 
-        for entry in listeners_per_track.values(): # iterating through all the entries in the dictionary
-            listener_count = len(entry["listeners"]) # how many listeners are in the entry (How many listeners does the track have)?
-            if listener_count > best_listener_count: # checking if the track we are currently iterating with is better than the previous
-                # (update best track if current has more distinct listeners)
+        # find track with most distinct listeners
+        for entry in listeners_per_track.values():
+            listener_count = len(
+                entry["listeners"])
+            if listener_count > best_listener_count:
                 best_listener_count = listener_count
                 best_track = entry["track"]
 
-        return best_track # gives back the track with the most listeners
+        return best_track
 
-    #Q4: average session duration for each user type, sorted from longest to shortest
+        # Q4: average session duration for each user type, sorted from longest to shortest
+
     def avg_session_duration_by_user_type(self) -> list[tuple[str, float]]:
         grouped = {}
 
@@ -173,7 +174,7 @@ class StreamingPlatform:
         result.sort(key=lambda item: item[1], reverse=True)
         return result
 
-    #Q5: total listening time in minutes for underage family sub-users
+    # Q5: total listening time in minutes for underage family sub-users
     def total_listening_time_underage_sub_users_minutes(self, age_threshold: int = 18) -> float:
         total_seconds = 0
 
@@ -186,7 +187,7 @@ class StreamingPlatform:
         # convert total seconds to minutes
         return total_seconds / 60
 
-    #6: top n artists ranked by total listening time of their songs
+    # 6: top n artists ranked by total listening time of their songs
     def top_artists_by_listening_time(self, n: int = 5) -> list[tuple[object, float]]:
         listening_time = {}
 
@@ -204,7 +205,7 @@ class StreamingPlatform:
         result.sort(key=lambda item: item[1], reverse=True)
         return result[:n]
 
-    #Q7: return the most listened genre of a user and its percentage of total listening time
+    # Q7: return the most listened genre of a user and its percentage of total listening time
     def user_top_genre(self, user_id: str) -> tuple[str, float] | None:
         user = self.get_user(user_id)
         # return None if user does not exist or has no listening history
@@ -232,9 +233,9 @@ class StreamingPlatform:
         percentage = (top_seconds / total_seconds) * 100
         return (top_genre, percentage)
 
-    #Q8: return all collaborative playlists with more than threshold distinct artists
+    # Q8: return all collaborative playlists with more than threshold distinct artists
     def collaborative_playlists_with_many_artists(
-        self, threshold: int = 3
+            self, threshold: int = 3
     ) -> list[CollaborativePlaylist]:
         result = []
 
@@ -254,7 +255,7 @@ class StreamingPlatform:
 
         return result
 
-    #Q9: compute average number of tracks for each playlist type
+    # Q9: compute average number of tracks for each playlist type
     def avg_tracks_per_playlist_type(self) -> dict[str, float]:
         standard_playlists = [p for p in self._playlists if type(p) is Playlist]
         collaborative_playlists = [p for p in self._playlists if isinstance(p, CollaborativePlaylist)]
@@ -276,7 +277,7 @@ class StreamingPlatform:
             "CollaborativePlaylist": collaborative_avg,
         }
 
-    #Q10: return users who listened to every track of at least one album
+    # Q10: return users who listened to every track of at least one album
     def users_who_completed_albums(self) -> list[tuple[object, list[str]]]:
         result = []
 

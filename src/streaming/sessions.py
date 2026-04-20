@@ -6,7 +6,11 @@ Implement the ListeningSession class for recording listening events.
 Classes to implement:
   - ListeningSession
 """
+
+
 class ListeningSession:
+    """A single listening event recording which user played which track and for how long."""
+
     def __init__(self, session_id: str, user, track, timestamp, duration_listened_seconds: int) -> None:
         self.session_id = session_id
         self.user = user

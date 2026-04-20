@@ -6,7 +6,11 @@ Implement the Album class for collections of AlbumTrack objects.
 Classes to implement:
   - Album
 """
+
+
 class Album:
+    """An ordered collection of AlbumTracks released by an artist."""
+
     def __init__(self, album_id: str, title: str, artist, release_year: int) -> None:
         self.album_id = album_id
         self.title = title

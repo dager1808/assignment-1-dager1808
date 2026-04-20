@@ -7,7 +7,11 @@ Classes to implement:
   - Playlist
     - CollaborativePlaylist
 """
+
+
 class Playlist:
+    """An ordered list of tracks curated by a single owner."""
+
     def __init__(self, playlist_id: str, name: str, owner) -> None:
         self.playlist_id = playlist_id
         self.name = name
@@ -26,6 +30,8 @@ class Playlist:
 
 
 class CollaborativePlaylist(Playlist):
+    """A playlist that multiple contributors can add tracks to."""
+
     def __init__(self, playlist_id: str, name: str, owner) -> None:
         super().__init__(playlist_id, name, owner)
         self.contributors = [owner]

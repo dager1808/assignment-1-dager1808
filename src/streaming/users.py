@@ -16,6 +16,8 @@ from datetime import date
 
 
 class User:
+    """Base class for all platform users."""
+
     def __init__(self, user_id: str, name: str, age: int) -> None:
         self.user_id = user_id
         self.name = name
@@ -36,22 +38,27 @@ class User:
 
 
 class FreeUser(User):
+    """User with free-tier access and no subscription."""
     pass
 
 
 class PremiumUser(User):
+    """Paying user with a subscription start date."""
+
     def __init__(self, user_id: str, name: str, age: int, subscription_start: date) -> None:
         super().__init__(user_id, name, age)
         self.subscription_start = subscription_start
 
 
 class FamilyAccountUser(PremiumUser):
+    """Premium user who manages a family account with sub-users."""
+
     def __init__(
-        self,
-        user_id: str,
-        name: str,
-        age: int,
-        subscription_start: date | None = None,
+            self,
+            user_id: str,
+            name: str,
+            age: int,
+            subscription_start: date | None = None,
     ) -> None:
         if subscription_start is None:
             subscription_start = date.today()
@@ -66,6 +73,8 @@ class FamilyAccountUser(PremiumUser):
 
 
 class FamilyMember(User):
+    """Sub-user belonging to a FamilyAccountUser."""
+
     def __init__(self, user_id: str, name: str, age: int, parent: FamilyAccountUser) -> None:
         super().__init__(user_id, name, age)
         self.parent = parent

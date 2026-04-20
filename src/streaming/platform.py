@@ -16,6 +16,8 @@ from datetime import datetime, timedelta
 
 
 class StreamingPlatform:
+    """Central platform that manages all entities and exposes analytics query methods."""
+
     def __init__(self, name: str) -> None:
         self.name = name
         self._tracks = []

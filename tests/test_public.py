@@ -322,7 +322,7 @@ class TestCollaborativePlaylistsManyArtists:
     """
 
     def test_returns_list_of_collaborative_playlists(
-        self, platform: StreamingPlatform
+            self, platform: StreamingPlatform
     ) -> None:
         """Verify the method returns a list of CollaborativePlaylist objects."""
         result = platform.collaborative_playlists_with_many_artists()
@@ -331,7 +331,7 @@ class TestCollaborativePlaylistsManyArtists:
             assert isinstance(item, CollaborativePlaylist)
 
     def test_higher_threshold_returns_empty(
-        self, platform: StreamingPlatform
+            self, platform: StreamingPlatform
     ) -> None:
         """Test that a high threshold returns an empty list."""
         result = platform.collaborative_playlists_with_many_artists(threshold=100)
@@ -347,10 +347,10 @@ class TestCollaborativePlaylistsManyArtists:
         from streaming.tracks import Song
 
         p = StreamingPlatform("Q8Test")
-        a1 = Artist("qa1", "ArtistOne",   genre="rock")
-        a2 = Artist("qa2", "ArtistTwo",   genre="pop")
+        a1 = Artist("qa1", "ArtistOne", genre="rock")
+        a2 = Artist("qa2", "ArtistTwo", genre="pop")
         a3 = Artist("qa3", "ArtistThree", genre="jazz")
-        a4 = Artist("qa4", "ArtistFour",  genre="blues")
+        a4 = Artist("qa4", "ArtistFour", genre="blues")
 
         user = FreeUser("qu1", "TestUser", age=25)
 
@@ -388,7 +388,7 @@ class TestAvgTracksPerPlaylistType:
     """
 
     def test_returns_dict_with_both_keys(
-        self, platform: StreamingPlatform
+            self, platform: StreamingPlatform
     ) -> None:
         """Verify the method returns a dict with both playlist types."""
         result = platform.avg_tracks_per_playlist_type()
@@ -405,7 +405,7 @@ class TestAvgTracksPerPlaylistType:
         assert result["Playlist"] == pytest.approx(2.0)
 
     def test_collaborative_playlist_average(
-        self, platform: StreamingPlatform
+            self, platform: StreamingPlatform
     ) -> None:
         """Verify the correct average for CollaborativePlaylist instances.
 
@@ -439,7 +439,7 @@ class TestUsersWhoCompletedAlbums:
             assert isinstance(item[0], User) and isinstance(item[1], list)
 
     def test_completed_album_titles_are_strings(
-        self, platform: StreamingPlatform
+            self, platform: StreamingPlatform
     ) -> None:
         """Verify all completed album titles are strings."""
         result = platform.users_who_completed_albums()
@@ -455,10 +455,10 @@ class TestUsersWhoCompletedAlbums:
         """
         result = platform.users_who_completed_albums()
         completed_ids = {user.user_id for user, _ in result}
-        assert "u1" in completed_ids       # alice completed the album
-        assert "u2" not in completed_ids   # bob only heard t1
-        assert "u3" not in completed_ids   # carol has no sessions
-        assert "u4" not in completed_ids   # dave only heard t1
+        assert "u1" in completed_ids  # alice completed the album
+        assert "u2" not in completed_ids  # bob only heard t1
+        assert "u3" not in completed_ids  # carol has no sessions
+        assert "u4" not in completed_ids  # dave only heard t1
 
     def test_correct_album_titles(self, platform: StreamingPlatform) -> None:
         """Verify the correct album title is listed for a completing user.
